@@ -42,7 +42,7 @@ class Crawl:
 
     def get_item(self, item_url):
         items_soup = bs(req.get(item_url).text, 'html.parser')
-        
+
 
 
 
