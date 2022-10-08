@@ -1,7 +1,5 @@
-from iherb.model.Item import Item
 
-
-class ItemPool(Item):
+class ItemPool:
     item_pool = dict()
 
     def add(self, item):

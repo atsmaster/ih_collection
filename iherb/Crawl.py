@@ -1,5 +1,6 @@
 import requests as req
 from bs4 import BeautifulSoup as bs
+from selenium import webdriver
 
 from iherb.model.Item import Item
 from iherb.model.ItemPool import ItemPool
@@ -12,7 +13,7 @@ class Crawl:
 
     item_pool = ItemPool()
 
-    def iherb_info(self):
+    def collect_iherb(self):
         soup = bs(req.get(self.BASE_URL + self.CARE_INFO_URL).text, 'html.parser')
 
         care_info = soup.findAll('li', 'sticky-header-menu-navigation-list-item-header')
@@ -50,21 +51,22 @@ class Crawl:
 
     # 상품에 접근
     def get_item(self, item_url):
-        items_soup = bs(req.get(item_url).text, 'html.parser')
+        item_soup = bs(req.get(item_url).text, 'html.parser')
+        self.browser.get(item_url)
+        html = self.browser.page_source
 
-        images = items_soup.find('div', 'thumbnail - container')
-
-        item = Item()
-        item.id = '111'
-
-        self.item_pool.add(item)
-
-        bb=0
+        aa=0
 
 
+    def __init__(self):
+        self.item_pool = ItemPool()
 
-
-
+        options = webdriver.FirefoxOptions()
+        options.add_argument('headless')
+        options.add_argument('window-size=1920x1080')
+        options.add_argument("disable-gpu")
+        self.browser = webdriver.Firefox(executable_path='C:/ih_collection_master/geckodriver.exe')
+        ab=0
 
 
 
