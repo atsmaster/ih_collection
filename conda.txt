@@ -6,4 +6,8 @@ pip install pymysql
 
 pip install peewee
 
-pip install selenium
+pip install selenium (x)
+
+pip install openpyxl (x)
+
+pip install pandas
