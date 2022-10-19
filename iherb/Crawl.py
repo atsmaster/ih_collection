@@ -57,7 +57,7 @@ class Crawl:
         for item in items:
             item_main = item.find('a', 'absolute-link product-link')
             item_rate = item.find('div', 'rating')
-            item_price = item.find('div', 'product-price text-nowrap')
+            item_price = item.find('div', 'product-price-top')
             item_image = item.find('div', 'product-image-wrapper')
 
             # 메인
@@ -71,9 +71,10 @@ class Crawl:
             review = item_rate.find('a', 'rating-count').find('span').text
 
             # 가격
-            price = item_price.find('div', 'product-price-top').find('bdi').text
+            price = item_price.find('span', 'price')
             red_price = item_price.find('span', 'price discount-red')
             green_price = item_price.find('span', 'price discount-green')
+            olp_price = item_price.find('span', 'price-olp')
             bask_price = item_price.find('div', 'product-discount-container')
 
             # 이미지
