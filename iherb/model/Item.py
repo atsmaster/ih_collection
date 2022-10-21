@@ -31,3 +31,6 @@ class Item(BaseModel):
     # 이미지
     image_link1 = CharField()
     image_link2 = CharField()
+
+    # 치료
+    care_info = CharField()

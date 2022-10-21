@@ -22,7 +22,7 @@ class Crawl:
     def collect_iherb(self):
         soup = bs(req.get(self.BASE_URL + self.CARE_INFO_URL).text, 'html.parser')
 
-        item_list = list()
+        item_pool = ItemPool()
         care_info = soup.findAll('li', 'sticky-header-menu-navigation-list-item-header')
 
         # care, items, item
@@ -30,35 +30,51 @@ class Crawl:
         for care in care_info:
             care_url = care.find('a').attrs['href']
             care_nm = care.find('a').string
+            care_nm = care_nm.replace('\n', '').strip()
             url = '{}{}?{}{}'.format(self.BASE_URL, care_url, self.ITEM_VIEW_COUNT_PARMA, 48)
             care_soup = bs(req.get(url).text, 'html.parser')
 
+            max_page = 1
             pages = care_soup.find('div', 'pagination')
-
-            max_page = 0
-            for page_tag in pages.findAll('a'):
-                page_text = page_tag.text.replace(' ', '').replace('\n', '')
-                if page_text.isdigit():
-                    print(int(page_text))
-                    max_page = max(max_page, int(page_text))
+            if pages is not None:
+                for page_tag in pages.findAll('a'):
+                    page_text = page_tag.text.replace(' ', '').replace('\n', '')
+                    if page_text.isdigit():
+                        print(int(page_text))
+                        max_page = max(max_page, int(page_text))
 
             for page in range(1, max_page+1):
+                print('start care ' + str(page) + 'p' + ': ' + care_nm)
+                print(care_url)
+
+                # if 'digestive-system' not in care_url:
+                #     break
+                # else:
+                #     if page is not 27:
+                #         continue
+                #     else:
+                #         aa=0
+
                 items_url = '{}{}?{}{}&{}{}'.format(self.BASE_URL, care_url, self.ITEM_VIEW_COUNT_PARMA, 48, self.PAGE_PARMA, str(page))
+
+
+
                 # page
-                self.get_items(items_url, item_list)
+                self.get_items(items_url, item_pool, care_nm)
 
-            break
-
-        df = pd.DataFrame(item_list)
-        df.to_csv('C:/ih_collection_master/ih_collection/item.csv', encoding='euc-kr')
+        aabb=0
+        # df = pd.DataFrame(item_list)
+        # df.to_csv('C:/ih_collection_master/ih_collection/item.csv', encoding='euc-kr')
 
 
     # 상품들이 존재하는 페이지 접근
-    def get_items(self, items_url, item_list):
+    def get_items(self, items_url, item_pool, care):
         items_soup = bs(req.get(items_url).text, 'html.parser')
         items = items_soup.findAll('div', 'product-inner product-inner-wide')
 
         for item in items:
+
+            ''' 데이터 추출 '''
             item_main = item.find('a', 'absolute-link product-link')
             item_rate = item.find('a', 'rating-count')
             item_price = item.find('div', 'product-price-top')
@@ -130,19 +146,22 @@ class Crawl:
 
             xstr = lambda s: s or ""
             print('product_id : ' + xstr(product_id))
-            print('title : ' + xstr(title))
-            print('brand_name : ' + xstr(brand_name))
-            print('url : ' + xstr(url))
-            print('grade : ' + xstr(grade))
-            print('review : ' + xstr(review))
-            print('price : ' + xstr(price))
-            print('red_price : ' + xstr(red_price))
-            print('green_price : ' + xstr(green_price))
-            print('olp_price : ' + xstr(olp_price))
-            print('bask_disc : ' + xstr(bask_disc))
-            print('image_link1 : ' + xstr(image_link1))
-            print('image_link2 : ' + xstr(image_link2))
+            # print('title : ' + xstr(title))
+            # print('brand_name : ' + xstr(brand_name))
+            # print('url : ' + xstr(url))
+            # print('grade : ' + xstr(grade))
+            # print('review : ' + xstr(review))
+            # print('price : ' + xstr(price))
+            # print('red_price : ' + xstr(red_price))
+            # print('green_price : ' + xstr(green_price))
+            # print('olp_price : ' + xstr(olp_price))
+            # print('bask_disc : ' + xstr(bask_disc))
+            # print('image_link1 : ' + xstr(image_link1))
+            # print('image_link2 : ' + xstr(image_link2))
 
+            ''' 검증 및 교정 '''
+
+            ''' 세팅 '''
             item = Item()
             item.id = product_id
             item.title = title
@@ -154,7 +173,6 @@ class Crawl:
             item.image_link2 = image_link2
 
             if red_price is not None:
-                aa = self.checkWon(red_price)
                 item.disc_cd = 'S'
                 item.price = red_price
                 item.price_org = olp_price
@@ -166,20 +184,31 @@ class Crawl:
 
             elif bask_disc is not None:
                 item.disc_cd = 'B'
-                item.price = int(price) * (100 - int(bask_disc)) * 0.01
-                item.price_org = price
+                item.price = price
+                item.price_org = olp_price
             else:
                 item.disc_cd = 'G'
                 item.price = price
                 item.price_org = price
 
-            print(item)
+            if item_pool.__contains__(product_id):
+                item = item_pool.get(product_id)
+                item.care_info = item.care_info + ";" + care
+            else:
+                item.care_info = care
+                item_pool.add(item)
 
-    def checkWon(self, price):
-        if price in chr(8361):
-            return price
+    def isWon(self, price):
+        if chr(8361) in price:
+            return True
         else:
-            return None
+            return False
+
+    def wonToInt(self, price):
+        if chr(8361) in price:
+            return True
+        else:
+            return False
 
 
     # # 상품에 접근
