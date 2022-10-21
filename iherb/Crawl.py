@@ -8,6 +8,7 @@ from bs4 import BeautifulSoup as bs
 
 from iherb.model.Item import Item
 from iherb.model.ItemPool import ItemPool
+from iherb.vo.CareInfo import CareInfo
 
 
 class Crawl:
@@ -20,18 +21,28 @@ class Crawl:
     item_pool = ItemPool()
 
     def collect_iherb(self):
-        soup = bs(req.get(self.BASE_URL + self.CARE_INFO_URL).text, 'html.parser')
+        # 시간 구하기
+        import time
+        start = time.time()  # 시작 시간 저장
+
 
         item_pool = ItemPool()
-        care_info = soup.findAll('li', 'sticky-header-menu-navigation-list-item-header')
+        lst_care_info = list()
 
-        # care, items, item
+        soup = bs(req.get(self.BASE_URL + self.CARE_INFO_URL).text, 'html.parser')
+        care_html = soup.findAll('li', 'sticky-header-menu-navigation-list-item-header')
+
         # 고민별 url 작업
-        for care in care_info:
-            care_url = care.find('a').attrs['href']
-            care_nm = care.find('a').string
-            care_nm = care_nm.replace('\n', '').strip()
-            url = '{}{}?{}{}'.format(self.BASE_URL, care_url, self.ITEM_VIEW_COUNT_PARMA, 48)
+        for care in care_html:
+            care_info = CareInfo()  # url, care_nm, care_nm_en, max_page
+            care_info.url = care.find('a').attrs['href']
+            care_info.care_nm = care.find('a').string.replace('\n', '').strip()
+            care_info.care_nm_en = care.find('a').attrs['href'][4:]
+            lst_care_info.append(care_info)
+
+        # 고민별 페이지 item 수집 작업
+        for care_info in lst_care_info:
+            url = '{}{}?{}{}'.format(self.BASE_URL, care_info.url, self.ITEM_VIEW_COUNT_PARMA, 48)
             care_soup = bs(req.get(url).text, 'html.parser')
 
             max_page = 1
@@ -40,35 +51,23 @@ class Crawl:
                 for page_tag in pages.findAll('a'):
                     page_text = page_tag.text.replace(' ', '').replace('\n', '')
                     if page_text.isdigit():
-                        print(int(page_text))
                         max_page = max(max_page, int(page_text))
 
             for page in range(1, max_page+1):
-                print('start care ' + str(page) + 'p' + ': ' + care_nm)
-                print(care_url)
+                print('start care ' + str(page) + 'p' + ': ' + care_info.care_nm)
+                print(care_info.care_nm_en)
 
-                # if 'digestive-system' not in care_url:
-                #     break
-                # else:
-                #     if page is not 27:
-                #         continue
-                #     else:
-                #         aa=0
+                items_url = '{}{}?{}{}&{}{}'.format(self.BASE_URL, care_info.url, self.ITEM_VIEW_COUNT_PARMA, 48, self.PAGE_PARMA, str(page))
+                self.get_items(items_url, item_pool, care_info.care_nm)
 
-                items_url = '{}{}?{}{}&{}{}'.format(self.BASE_URL, care_url, self.ITEM_VIEW_COUNT_PARMA, 48, self.PAGE_PARMA, str(page))
-
-
-
-                # page
-                self.get_items(items_url, item_pool, care_nm)
-
+        print("time :", time.time() - start)  # 현재시각 - 시작시간 = 실행 시간
         aabb=0
         # df = pd.DataFrame(item_list)
         # df.to_csv('C:/ih_collection_master/ih_collection/item.csv', encoding='euc-kr')
 
 
     # 상품들이 존재하는 페이지 접근
-    def get_items(self, items_url, item_pool, care):
+    def get_items(self, items_url, item_pool, care_nm):
         items_soup = bs(req.get(items_url).text, 'html.parser')
         items = items_soup.findAll('div', 'product-inner product-inner-wide')
 
@@ -193,9 +192,9 @@ class Crawl:
 
             if item_pool.__contains__(product_id):
                 item = item_pool.get(product_id)
-                item.care_info = item.care_info + ";" + care
+                item.care_info = item.care_info + ";" + care_nm
             else:
-                item.care_info = care
+                item.care_info = care_nm
                 item_pool.add(item)
 
     def isWon(self, price):
