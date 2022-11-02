@@ -34,3 +34,6 @@ class Item(BaseModel):
 
     # 치료
     care_info = CharField()
+
+    # 품절
+    sold_out_yn = BooleanField()

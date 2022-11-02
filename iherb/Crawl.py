@@ -53,7 +53,8 @@ class Crawl:
                     if page_text.isdigit():
                         max_page = max(max_page, int(page_text))
 
-            for page in range(1, max_page+1):
+            # for page in range(1, max_page+1):
+            for page in range(29, 30):
                 print('start care ' + str(page) + 'p' + ': ' + care_info.care_nm)
                 print(care_info.care_nm_en)
 
@@ -86,8 +87,8 @@ class Crawl:
             brand_name = item_main.attrs['data-ga-brand-name']
             url = item_main.attrs['href']
 
-            # if product_id == 'LEX-19496':
-            #     aaaa=0
+            if product_id == 'CAL-57320':
+                aaaa=0
 
             # 평점 및 리뷰수 (None 일수도 있음)
             grade = item_rate.attrs['title'] if item_rate is not None else None
@@ -143,6 +144,13 @@ class Crawl:
             else:
                 image_link2 = "None"
 
+            # 품절 확인
+            sold_out_yn = False
+            dbis = item_cart.findAll('bdi')
+            for b in dbis:
+                if '품절' in b:
+                    sold_out_yn = True
+
             xstr = lambda s: s or ""
             print('product_id : ' + xstr(product_id))
             # print('title : ' + xstr(title))
@@ -173,22 +181,20 @@ class Crawl:
 
             if red_price is not None:
                 item.disc_cd = 'S'
-                item.price = red_price
-                item.price_org = olp_price
-
+                item.price = self.strToPrice(red_price)
+                item.price_org = self.strToPrice(olp_price)
             elif green_price is not None:
                 item.disc_cd = 'P'
-                item.price = green_price
-                item.price_org = olp_price
-
+                item.price = self.strToPrice(green_price)
+                item.price_org = self.strToPrice(olp_price)
             elif bask_disc is not None:
                 item.disc_cd = 'B'
-                item.price = price
-                item.price_org = olp_price
+                item.price = self.strToPrice(price) * (100 - int(bask_disc)) / 100
+                item.price_org = self.strToPrice(price)
             else:
                 item.disc_cd = 'G'
-                item.price = price
-                item.price_org = price
+                item.price = self.strToPrice(price)
+                item.price_org = self.strToPrice(price)
 
             if item_pool.__contains__(product_id):
                 item = item_pool.get(product_id)
@@ -209,6 +215,15 @@ class Crawl:
         else:
             return False
 
+    def strToPrice(self, str):
+        return int(re.sub(r'[^0-9]', '', str))
+
+    def strToPrice(self, str):
+        rt = re.sub(r'[^0-9]', '', str)
+        if rt is None:
+            return None
+        else:
+            return int(rt)
 
     # # 상품에 접근
     # def get_item(self, item_url):

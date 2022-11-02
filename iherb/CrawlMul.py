@@ -78,12 +78,13 @@ class CrawlMul:
 
             items_url = '{}{}?{}{}&{}{}'.format(self.BASE_URL, care_info.url, self.ITEM_VIEW_COUNT_PARMA, 48,
                                                 self.PAGE_PARMA, str(page))
-            self.get_items(items_url, care_info.care_nm, item_pool)
+            self.get_items(items_url, care_info.care_nm, page, item_pool)
+            print(len(item_pool))
 
         return item_pool
 
     # 상품들이 존재하는 페이지 접근
-    def get_items(self, items_url, care_nm, item_pool):
+    def get_items(self, items_url, care_nm, page, item_pool):
         items_soup = bs(req.get(items_url).text, 'html.parser')
         items = items_soup.findAll('div', 'product-inner product-inner-wide')
 
@@ -159,9 +160,17 @@ class CrawlMul:
             else:
                 image_link2 = "None"
 
+            # 품절 확인
+            sold_out_yn = False
+            dbis = item_cart.findAll('bdi')
+            for b in dbis:
+                if '품절' in b:
+                    sold_out_yn = True
+
             xstr = lambda s: s or ""
+            print(care_nm + '  ' + str(page) + 'page')
             print('product_id : ' + xstr(product_id))
-            # print('title : ' + xstr(title))
+            print('title : ' + xstr(title))
             # print('brand_name : ' + xstr(brand_name))
             # print('url : ' + xstr(url))
             # print('grade : ' + xstr(grade))
@@ -186,31 +195,27 @@ class CrawlMul:
             item.review = review
             item.image_link1 = image_link1
             item.image_link2 = image_link2
+            item.sold_out_yn = sold_out_yn
 
             if red_price is not None:
                 item.disc_cd = 'S'
-                item.price = red_price
-                item.price_org = olp_price
-
+                item.price = self.strToPrice(red_price)
+                item.price_org = self.strToPrice(olp_price)
             elif green_price is not None:
                 item.disc_cd = 'P'
-                item.price = green_price
-                item.price_org = olp_price
-
+                item.price = self.strToPrice(green_price)
+                item.price_org = self.strToPrice(olp_price)
             elif bask_disc is not None:
                 item.disc_cd = 'B'
-                item.price = price
-                item.price_org = olp_price
+                item.price = self.strToPrice(price) * (100 - int(bask_disc)) / 100
+                item.price_org = self.strToPrice(price)
             else:
                 item.disc_cd = 'G'
-                item.price = price
-                item.price_org = price
+                item.price = self.strToPrice(price)
+                item.price_org = self.strToPrice(price)
 
             item.care_info = care_nm
             item_pool[item.id] = item
-            print(len(item_pool))
-            abcd = 0
-
 
             # if item_pool.__contains__(product_id):
             #     item = item_pool[item.id]
@@ -231,6 +236,15 @@ class CrawlMul:
         else:
             return False
 
+    def strToPrice(self, str):
+        if str is None:
+            return None
+
+        rt = re.sub(r'[^0-9]', '', str)
+        if rt is None:
+            return None
+        else:
+            return int(rt)
 
     # # 상품에 접근
     # def get_item(self, item_url):
